@@ -53,13 +53,17 @@ fn first_lower<'r, 's>(s: &'r tera::Value, _: &'s HashMap<String, tera::Value>) 
     }
 }
 
+fn lower_case<'r, 's>(s: &'r tera::Value, _: &'s HashMap<String, tera::Value>) -> Result<tera::Value, tera::Error> {
+    Ok(tera::Value::String(try_get_value!("data", "value", String, s).to_lowercase()))
+}
+
 fn main() -> Result<(), anyhow::Error> {
     let temp = r#"import { apiConfig } from 'utils/api'
 {% for data in list %}
 export const {{ data.name | first_lower }} = apiConfig({
 {% for item in data.list %}
   {{ item.title }}: [
-  '{{item.method}}',
+  '{{item.method | lower }}',
   '{{item.path}}'
   ],
 {% endfor %}
@@ -84,6 +88,7 @@ export const {{ data.name | first_lower }} = apiConfig({
 
     let mut tera = Tera::default();
     tera.register_filter("first_lower", first_lower);
+    tera.register_filter("lower", lower_case);
     tera.add_raw_template("api", temp)?;
     let mut context = Context::new();
     context.insert("list", &data);
