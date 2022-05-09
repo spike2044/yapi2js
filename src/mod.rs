@@ -12,6 +12,8 @@ mod types {
         description: Option<String>,
         items: Option<Box<ResponseValueType>>,
         properties: Option<HashMap<String, ResponseValueType>>,
+        #[serde(rename(deserialize = "$$ref"))]
+        __ref: Option<String>,
     }
 
     pub fn get_response_type(value: &ResponseValueType) -> String {
