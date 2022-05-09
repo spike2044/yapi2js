@@ -1,10 +1,6 @@
-use std::collections::HashMap;
-use std::fmt::{Error, format};
 use std::fs;
 use std::fs::OpenOptions;
 use serde::{Deserialize, Serialize};
-use tera::{Context, Tera, try_get_value};
-use std::io::Write;
 use std::path::Path;
 use serde_json::json;
 
@@ -12,15 +8,34 @@ use anyhow::{anyhow, Result};
 use clap::{AppSettings, Parser};
 
 
+mod ts_types;
+mod ts_template;
+
+use ts_template::*;
+use ts_types::*;
+
+
 #[derive(Serialize, Deserialize, Debug)]
-struct YapiItem {
+struct ReqQuery {
+    required: String,
+    _id: String,
+    name: String,
+    desc: Option<String>,
+}
+
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct YapiItem {
     path: String,
     method: String,
     title: String,
+    res_body_type: String,
+    res_body: Option<String>,
+    req_query: Option<Vec<ReqQuery>>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-struct YapiObj {
+pub struct YapiObj {
     index: i32,
     name: String,
     desc: String,
@@ -44,32 +59,12 @@ fn create_path(path: &Path) -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-fn first_lower<'r, 's>(s: &'r tera::Value, _: &'s HashMap<String, tera::Value>) -> Result<tera::Value, tera::Error> {
-    let mut c = try_get_value!("data.name", "value", String, s);
-    let mut c = c.chars();
-    match c.next() {
-        None => Ok(tera::Value::String(String::new())),
-        Some(f) => Ok(tera::Value::String(f.to_lowercase().collect::<String>() + c.as_str())),
-    }
-}
 
-fn lower_case<'r, 's>(s: &'r tera::Value, _: &'s HashMap<String, tera::Value>) -> Result<tera::Value, tera::Error> {
-    Ok(tera::Value::String(try_get_value!("data", "value", String, s).to_lowercase()))
-}
 
 fn main() -> Result<(), anyhow::Error> {
-    let temp = r#"import { apiConfig } from 'utils/api'
-{% for data in list %}
-export const {{ data.name | first_lower }} = apiConfig({
-{% for item in data.list %}
-  {{ item.title }}: [
-  '{{item.method | lower }}',
-  '{{item.path}}'
-  ],
-{% endfor %}
-})
-{% endfor %}
-"#;
+
+
+    // ResponseValue
 
     let args: Command = Command::parse();
     let in_file = Path::new(&args.in_file);
@@ -86,23 +81,7 @@ export const {{ data.name | first_lower }} = apiConfig({
     let path = out_file.parent().ok_or(anyhow!("out_file is not valid"))?;
     create_path(path)?;
 
-    let mut tera = Tera::default();
-    tera.register_filter("first_lower", first_lower);
-    tera.register_filter("lower", lower_case);
-    tera.add_raw_template("api", temp)?;
-    let mut context = Context::new();
-    context.insert("list", &data);
-
-    match OpenOptions::new().create(true).read(true).write(true).open(out_file) {
-        Ok(mut file) => {
-            let code = tera.render("api", &context)?;
-            // println!("{}", code);
-            file.write_all(code.as_bytes())?;
-            Ok(())
-        }
-        Err(e) => {
-            println!("{}", e);
-            Err(anyhow!(e.to_string()))
-        }
-    }
+    ts_template::generate(out_file, &data)?;
+    ts_types::generate( &data)?;
+    Ok(())
 }
