@@ -1,20 +1,15 @@
 use std::collections::HashMap;
-use std::fmt::{Error, format};
-use std::fs;
 use std::fs::OpenOptions;
-use serde::{Deserialize, Serialize};
 use tera::{Context, Tera, try_get_value};
 use std::io::Write;
 use std::path::Path;
-use serde_json::json;
 
 use anyhow::{anyhow, Result};
-use clap::{AppSettings, Parser};
 use crate::YapiObj;
 
 
-fn first_lower<'r, 's>(s: &'r tera::Value, _: &'s HashMap<String, tera::Value>) -> Result<tera::Value, tera::Error> {
-    let mut c = try_get_value!("data.name", "value", String, s);
+fn first_lower(s: &tera::Value, _: &HashMap<String, tera::Value>) -> Result<tera::Value, tera::Error> {
+    let c = try_get_value!("data.name", "value", String, s);
     let mut c = c.chars();
     match c.next() {
         None => Ok(tera::Value::String(String::new())),
@@ -22,7 +17,7 @@ fn first_lower<'r, 's>(s: &'r tera::Value, _: &'s HashMap<String, tera::Value>) 
     }
 }
 
-fn lower_case<'r, 's>(s: &'r tera::Value, _: &'s HashMap<String, tera::Value>) -> Result<tera::Value, tera::Error> {
+fn lower_case(s: &tera::Value, _: &HashMap<String, tera::Value>) -> Result<tera::Value, tera::Error> {
     Ok(tera::Value::String(try_get_value!("data", "value", String, s).to_lowercase()))
 }
 

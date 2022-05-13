@@ -1,11 +1,13 @@
 use std::collections::{HashMap, HashSet};
-use serde::{Deserialize, Serialize};
-use serde_json::{Result, Value};
+use std::fmt::Write as _;
 use std::fs::OpenOptions;
 use std::io::prelude::*;
-use crate::YapiObj;
-use anyhow::{Result as AnyResult, Error};
+
+use anyhow::Result as AnyResult;
 use regex::Regex;
+use serde::{Deserialize, Serialize};
+
+use crate::YapiObj;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ResponseValueType {
@@ -23,29 +25,29 @@ fn get_response_type(value: &ResponseValueType) -> String {
             if let Some(properties) = &value.properties {
                 let mut result = String::from("{\n");
                 for (k, v) in properties {
-                    result.push_str(&format!("{}:{}\n", k, get_response_type(v)));
+                    let _ = writeln!(result, "{}:{}", k, get_response_type(v));
                 }
-                result.push_str("}");
+                result.push('}');
                 return result;
             }
-            return String::from("{}");
+            String::from("{}")
         }
         "array" => {
             if let Some(items) = &value.items {
                 return format!("{}[]", get_response_type(items));
             }
-            return String::new();
+            String::new()
         }
         "string" => {
-            return String::from("string");
+            String::from("string")
         }
         "integer" => {
-            return String::from("number");
+            String::from("number")
         }
         "boolean" => {
-            return String::from("boolean");
+            String::from("boolean")
         }
-        _ => String::from("unknown"),
+        _ => String::from("unknown")
     }
 }
 
@@ -69,13 +71,9 @@ pub fn generate(data: &Vec<YapiObj>) -> AnyResult<()> {
             }
         }
     }
-    if result.len() > 0 {
-        match OpenOptions::new().create(true).read(true).write(true).open("type.ts") {
-            Ok(mut file) => {
-                file.write_all(result.as_bytes())?;
-
-            }
-            _ => (),
+    if !result.is_empty() {
+        if let Ok(mut file) = OpenOptions::new().create(true).read(true).write(true).open("type.ts") {
+            file.write_all(result.as_bytes())?;
         }
     }
     Ok(())

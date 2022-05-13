@@ -1,19 +1,13 @@
 use std::fs;
-use std::fs::OpenOptions;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
-use serde_json::json;
 
 use anyhow::{anyhow, Result};
-use clap::{AppSettings, Parser};
+use clap::{Parser};
 
 
 mod ts_types;
 mod ts_template;
-
-use ts_template::*;
-use ts_types::*;
-
 
 #[derive(Serialize, Deserialize, Debug)]
 struct ReqQuery {
@@ -44,7 +38,6 @@ pub struct YapiObj {
 
 #[derive(Debug, Parser)]
 #[clap(version = "0.1")]
-#[clap(setting = AppSettings::ColoredHelp)]
 struct Command {
     #[clap(short, long, required = true)]
     in_file: String,
@@ -53,7 +46,7 @@ struct Command {
 }
 
 fn create_path(path: &Path) -> Result<(), anyhow::Error> {
-    if !fs::metadata(path).is_ok() && !path.exists() {
+    if fs::metadata(path).is_err() && !path.exists() {
         fs::create_dir_all(path)?;
     }
     Ok(())
@@ -78,7 +71,7 @@ fn main() -> Result<(), anyhow::Error> {
     let string = fs::read_to_string(in_file)?;
     let data = serde_json::from_str::<Vec<YapiObj>>(&string)?;
 
-    let path = out_file.parent().ok_or(anyhow!("out_file is not valid"))?;
+    let path = out_file.parent().ok_or_else(|| anyhow!("out_file is not valid"))?;
     create_path(path)?;
 
     ts_template::generate(out_file, &data)?;
