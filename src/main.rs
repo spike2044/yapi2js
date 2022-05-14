@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::path::Path;
 
 use anyhow::{anyhow, Result};
@@ -16,15 +17,57 @@ struct ReqQuery {
     desc: Option<String>,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+struct ReqHeader {
+    required: String,
+    _id: String,
+    name: String,
+    value: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct ReqParams {
+    _id: String,
+    name: String,
+    desc: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct ReqBodyForm {
+    required: String,
+    _id: String,
+    name: String,
+    desc: Option<String>,
+    r#type: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Eq, Hash, PartialEq)]
+enum ReqBodyType {
+    form,
+    json,
+}
+
+#[derive(Serialize, Deserialize, Debug, Eq, Hash, PartialEq)]
+enum ResBodyType {
+    json,
+    raw
+}
+
+
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct YapiItem {
     path: String,
     method: String,
     title: String,
-    res_body_type: String,
+    req_body_type: ReqBodyType,
+    res_body_type: ResBodyType,
     res_body: Option<String>,
-    req_query: Option<Vec<ReqQuery>>,
+    req_body_other: Option<String>,
+    req_query: Vec<ReqQuery>,
+    req_headers: Vec<ReqHeader>,
+    req_params: Vec<ReqParams>,
+    req_body_form: Vec<ReqBodyForm>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -56,13 +99,13 @@ async fn main() -> Result<(), anyhow::Error> {
     let args: Command = Command::parse();
     let in_file = &args.r#in;
     let out_file = Path::new(&args.out_file);
-
-    let data = loader(in_file).await?;
+    let data: Vec<YapiObj> = loader(in_file).await?;
     let path = out_file.parent().ok_or_else(|| anyhow!("out_file is not valid"))?;
     create_path(path).await?;
 
     ts_template::generate(out_file, &data)?;
     ts_types::generate(&data)?;
+    ts_types::generate_request(&data)?;
     Ok(())
 }
 
