@@ -1,6 +1,6 @@
 # yapi2js
 
-**极端不稳定，请勿生产环境使用。**
+**生成规则仅适用个人项目，且版本极端不稳定，请勿生产环境使用。**
 
 yapi 导出 json 配置。 生成 ts request 和 response type， 并配合模版生成 api.ts。
 
