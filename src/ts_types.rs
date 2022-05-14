@@ -61,7 +61,7 @@ pub fn generate(data: &Vec<YapiObj>) -> AnyResult<()> {
                 continue;
             }
             let body = item.res_body.as_ref().ok_or_else(|| anyhow!("no res_body"))?;
-            let mut v: ResponseValueType = serde_json::from_str(&body)?;
+            let v: ResponseValueType = serde_json::from_str(body)?;
             let title = format!("{}{}", obj.name, item.title);
             if !set.contains(&title) {
                 result = format!("{} \n export type {}{} = {}", result, obj.name, item.title, get_response_type(&v));
