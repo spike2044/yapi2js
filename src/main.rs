@@ -2,8 +2,6 @@ use std::path::Path;
 
 use anyhow::{anyhow, Result};
 use clap::Parser;
-// use reqwest::header::USER_AGENT;
-// use std::fs;
 use serde::{Deserialize, Serialize};
 use tokio::fs;
 
@@ -54,13 +52,12 @@ async fn create_path(path: &Path) -> Result<()> {
 }
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> Result<(), anyhow::Error> {
     let args: Command = Command::parse();
     let in_file = &args.r#in;
     let out_file = Path::new(&args.out_file);
 
     let data = loader(in_file).await?;
-
     let path = out_file.parent().ok_or_else(|| anyhow!("out_file is not valid"))?;
     create_path(path).await?;
 

@@ -3,7 +3,7 @@ use std::fmt::Write as _;
 use std::fs::OpenOptions;
 use std::io::prelude::*;
 
-use anyhow::Result as AnyResult;
+use anyhow::{anyhow, Result as AnyResult};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
@@ -55,26 +55,22 @@ pub fn generate(data: &Vec<YapiObj>) -> AnyResult<()> {
     let re = Regex::new(r"^\w+$").unwrap();
     let mut set = HashSet::new();
     let mut result = String::new();
-    // TODO: refactor condition and loop
     for obj in data {
         for item in &obj.list {
-            if item.res_body_type == "json" && re.is_match(&item.title) {
-                if let Some(value) = &item.res_body {
-                    if let Ok(v) = serde_json::from_str::<ResponseValueType>(value) {
-                        let title = format!("{}{}", obj.name, item.title);
-                        if !set.contains(&title) {
-                            result = format!("{} \n export type {}{} = {}", result, obj.name, item.title, get_response_type(&v));
-                            set.insert(title);
-                        }
-                    }
-                }
+            if item.res_body_type != "json" || !re.is_match(&item.title) || item.res_body.is_none() {
+                continue;
+            }
+            let body = item.res_body.as_ref().ok_or_else(|| anyhow!("no res_body"))?;
+            let mut v: ResponseValueType = serde_json::from_str(&body)?;
+            let title = format!("{}{}", obj.name, item.title);
+            if !set.contains(&title) {
+                result = format!("{} \n export type {}{} = {}", result, obj.name, item.title, get_response_type(&v));
+                set.insert(title);
             }
         }
     }
-    if !result.is_empty() {
-        if let Ok(mut file) = OpenOptions::new().create(true).read(true).write(true).open("type.ts") {
-            file.write_all(result.as_bytes())?;
-        }
+    if let Ok(mut file) = OpenOptions::new().read(true).write(true).truncate(true).create(true).open("type.ts") {
+        file.write_all(result.as_bytes())?;
     }
     Ok(())
 }

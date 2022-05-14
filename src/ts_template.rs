@@ -42,10 +42,9 @@ export const {{ data.name | first_lower }} = apiConfig({
     let mut context = Context::new();
     context.insert("list", &data);
 
-    match OpenOptions::new().create(true).read(true).write(true).open(out_file) {
+    match OpenOptions::new().read(true).write(true).truncate(true).create(true).open(out_file) {
         Ok(mut file) => {
             let code = tera.render("api", &context)?;
-            // println!("{}", code);
             file.write_all(code.as_bytes())?;
             Ok(())
         }
