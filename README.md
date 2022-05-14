@@ -8,4 +8,4 @@ yapi 导出 json 配置， 配合 js apiConfig 使用，生成 request function,
 
 TODO：
 - [ ] ts request type
-- [ ] config from yapi uri
+- [x] config from yapi uri
