@@ -80,7 +80,8 @@ pub fn generate(data: &Vec<YapiObj>) -> AnyResult<()> {
             }
         }
     }
-    if let Ok(mut file) = OpenOptions::new().read(true).write(true).truncate(true).create(true).open("type.ts") {
+    // TODO: response file path
+    if let Ok(mut file) = OpenOptions::new().read(true).write(true).truncate(true).create(true).open("response.ts") {
         file.write_all(result.as_bytes())?;
     }
     Ok(())
@@ -133,6 +134,7 @@ pub fn generate_request(data: &Vec<YapiObj>) -> AnyResult<()> {
             result = format!("{} \n export type {} = {{ {}{}{}\n }}", result, title, req_params, req_query, data);
         }
     }
+    // TODO: request file path
     if let Ok(mut f) = OpenOptions::new().read(true).write(true).truncate(true).create(true).open("request.ts") {
         f.write_all(result.as_bytes())?;
     }
