@@ -1,7 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write as _;
 use std::fs::OpenOptions;
-use std::io::prelude::*;
 use std::io::Write;
 use std::string::String;
 
@@ -115,7 +114,7 @@ pub fn generate_request(data: &Vec<YapiObj>) -> AnyResult<()> {
 
             let mut data = match item.req_body_type {
                 ReqBodyType::form => {
-                    item.req_body_form.iter().map(|x| format!("{}?: {} \n", x.name, map.get(&x.name).cloned().unwrap_or("unknown".to_string()))).collect::<String>()
+                    item.req_body_form.iter().map(|x| format!("{}?: {} \n", x.name, map.get(&x.name).cloned().unwrap_or_else(|| "unknown".to_string()))).collect::<String>()
                 }
                 ReqBodyType::json => {
                     match item.req_body_other {
@@ -126,7 +125,6 @@ pub fn generate_request(data: &Vec<YapiObj>) -> AnyResult<()> {
                         None => String::from("")
                     }
                 }
-                _ => { String::from("") }
             };
             if !data.is_empty() {
                 data = format!("\ndata: {{\n{} }}", data);
