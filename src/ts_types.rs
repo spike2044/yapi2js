@@ -29,7 +29,7 @@ fn get_response_type(value: &ResponseValueType) -> String {
     match value.r#type.as_str() {
         "object" => {
             if let Some(properties) = &value.properties {
-                let mut result = String::from("{\n");
+                let mut result = format!("\n// ref: {}\n {{\n", value.__ref.as_ref().unwrap());
                 for (k, v) in properties {
                     let _ = writeln!(result, "{}:{}", k, get_response_type(v));
                 }
@@ -75,7 +75,7 @@ pub fn generate(data: &Vec<YapiObj>) -> AnyResult<()> {
             let v: ResponseValueType = serde_json::from_str(body)?;
             let title = format!("{}{}", obj.name, item.title);
             if !set.contains(&title) {
-                result = format!("{} \n export type {}{}Type = {}", result, obj.name, item.title, get_response_type(&v));
+                result = format!("{} \n\n // path: {} {} \n export type {}{}Type = {}", result, item.method, item.path, obj.name, item.title, get_response_type(&v));
                 set.insert(title);
             }
         }
