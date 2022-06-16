@@ -1,4 +1,3 @@
-use std::collections::HashSet;
 use std::path::Path;
 
 use anyhow::{anyhow, Result};
@@ -6,8 +5,8 @@ use clap::Parser;
 use serde::{Deserialize, Serialize};
 use tokio::fs;
 
-mod ts_types;
 mod ts_template;
+mod ts_types;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct ReqQuery {
@@ -43,17 +42,19 @@ struct ReqBodyForm {
 
 #[derive(Serialize, Deserialize, Debug, Eq, Hash, PartialEq)]
 enum ReqBodyType {
-    form,
-    json,
+    #[serde(rename(deserialize = "form"))]
+    Form,
+    #[serde(rename(deserialize = "json"))]
+    Json,
 }
 
 #[derive(Serialize, Deserialize, Debug, Eq, Hash, PartialEq)]
 enum ResBodyType {
-    json,
-    raw
+    #[serde(rename(deserialize = "json"))]
+    Json,
+    #[serde(rename(deserialize = "raw"))]
+    Raw,
 }
-
-
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct YapiItem {
@@ -100,7 +101,9 @@ async fn main() -> Result<(), anyhow::Error> {
     let in_file = &args.r#in;
     let out_file = Path::new(&args.out_file);
     let data: Vec<YapiObj> = loader(in_file).await?;
-    let path = out_file.parent().ok_or_else(|| anyhow!("out_file is not valid"))?;
+    let path = out_file
+        .parent()
+        .ok_or_else(|| anyhow!("out_file is not valid"))?;
     create_path(path).await?;
 
     ts_template::generate(out_file, &data)?;
@@ -109,7 +112,10 @@ async fn main() -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-async fn loader<T>(path: &str) -> Result<T> where T: for<'a> Deserialize<'a> {
+async fn loader<T>(path: &str) -> Result<T>
+where
+    T: for<'a> Deserialize<'a>,
+{
     let str = if path.starts_with("http") || path.starts_with("https") {
         url_loader(path).await?
     } else {
@@ -128,7 +134,6 @@ async fn file_loader(path: &str) -> Result<String> {
 }
 
 async fn url_loader(url: &str) -> Result<String> {
-    let string = reqwest::get(url)
-        .await?.text().await?;
+    let string = reqwest::get(url).await?.text().await?;
     Ok(string)
 }
