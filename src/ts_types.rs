@@ -44,17 +44,11 @@ fn get_response_type(value: &ResponseValueType) -> String {
             }
             String::new()
         }
-        "string" => {
-            String::from("string")
-        }
-        "integer" => {
-            String::from("number")
-        }
-        "boolean" => {
-            String::from("boolean")
-        }
+        "string" => String::from("string"),
+        "integer" => String::from("number"),
+        "boolean" => String::from("boolean"),
 
-        _ => String::from("unknown")
+        _ => String::from("unknown"),
     }
 }
 
@@ -65,8 +59,10 @@ pub fn generate(data: &Vec<YapiObj>) -> AnyResult<()> {
     for obj in data {
         for item in &obj.list {
             let body = match item.res_body_type {
-                ResBodyType::json => { &item.res_body }
-                ResBodyType::raw => { continue; }
+                ResBodyType::Json => &item.res_body,
+                ResBodyType::Raw => {
+                    continue;
+                }
             };
             if !re.is_match(&item.title) || body.is_none() || body == &Some(String::from("")) {
                 continue;
@@ -75,13 +71,27 @@ pub fn generate(data: &Vec<YapiObj>) -> AnyResult<()> {
             let v: ResponseValueType = serde_json::from_str(body)?;
             let title = format!("{}{}", obj.name, item.title);
             if !set.contains(&title) {
-                result = format!("{} \n\n // path: {} {} \n export type {}{}Type = {}", result, item.method, item.path, obj.name, item.title, get_response_type(&v));
+                result = format!(
+                    "{} \n\n // path: {} {} \n export type {}{}Type = {}",
+                    result,
+                    item.method,
+                    item.path,
+                    obj.name,
+                    item.title,
+                    get_response_type(&v)
+                );
                 set.insert(title);
             }
         }
     }
     // TODO: response file path
-    if let Ok(mut file) = OpenOptions::new().read(true).write(true).truncate(true).create(true).open("response.ts") {
+    if let Ok(mut file) = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .truncate(true)
+        .create(true)
+        .open("response.ts")
+    {
         file.write_all(result.as_bytes())?;
     }
     Ok(())
@@ -103,42 +113,71 @@ pub fn generate_request(data: &Vec<YapiObj>) -> AnyResult<()> {
             }
             set.insert(&item.title);
 
-            let mut req_params = item.req_params.iter().map(|x| format!("{}: string\n", x.name)).collect::<String>();
+            let mut req_params = item
+                .req_params
+                .iter()
+                .map(|x| format!("{}: string\n", x.name))
+                .collect::<String>();
             if !req_params.is_empty() {
                 req_params = format!("\n uri: {{\n{} }}", req_params);
             }
 
-            let mut req_query = item.req_query.iter().map(|x| format!("{}{}: string\n", x.name, if x.required == "1" { "" } else { "?" })).collect::<String>();
+            let mut req_query = item
+                .req_query
+                .iter()
+                .map(|x| {
+                    format!(
+                        "{}{}: string\n",
+                        x.name,
+                        if x.required == "1" { "" } else { "?" }
+                    )
+                })
+                .collect::<String>();
             if !req_query.is_empty() {
                 req_query = format!("\nparams?: {{\n{} }}", req_query);
             }
 
             let mut data = match item.req_body_type {
-                ReqBodyType::form => {
-                    item.req_body_form.iter().map(|x| format!("{}?: {} \n", x.name, map.get(&x.name).cloned().unwrap_or_else(|| "unknown".to_string()))).collect::<String>()
-                }
-                ReqBodyType::json => {
-                    match item.req_body_other {
-                        Some(ref body) => {
-                            let v: ResponseValueType = serde_json::from_str(body)?;
-                            get_response_type(&v).trim_matches(|c| c == '{' || c == '}').to_string()
-                        }
-                        None => String::from("")
+                ReqBodyType::Form => item
+                    .req_body_form
+                    .iter()
+                    .map(|x| {
+                        format!(
+                            "{}?: {} \n",
+                            x.name,
+                            map.get(&x.name)
+                                .cloned()
+                                .unwrap_or_else(|| "unknown".to_string())
+                        )
+                    })
+                    .collect::<String>(),
+                ReqBodyType::Json => match item.req_body_other {
+                    Some(ref body) => {
+                        let v: ResponseValueType = serde_json::from_str(body)?;
+                        get_response_type(&v).to_string()
                     }
-                }
+                    None => String::from(""),
+                },
             };
             if !data.is_empty() {
-                data = format!("\ndata?: {{\n{} }}", data);
+                data = format!("\ndata?: {} ", data);
             };
 
-            result = format!("{} \n export type {} = {{ {}{}{}\n }}", result, title, req_params, req_query, data);
+            result = format!(
+                "{} \n export type {} = {{ {}{}{}\n }}",
+                result, title, req_params, req_query, data
+            );
         }
     }
     // TODO: request file path
-    if let Ok(mut f) = OpenOptions::new().read(true).write(true).truncate(true).create(true).open("request.ts") {
+    if let Ok(mut f) = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .truncate(true)
+        .create(true)
+        .open("request.ts")
+    {
         f.write_all(result.as_bytes())?;
     }
     Ok(())
 }
-
-

@@ -4,11 +4,14 @@ use std::io::Write;
 use std::path::Path;
 
 use anyhow::{anyhow, Result};
-use tera::{Context, Tera, try_get_value};
+use tera::{try_get_value, Context, Tera};
 
 use crate::YapiObj;
 
-fn first_lower(s: &tera::Value, _: &HashMap<String, tera::Value>) -> Result<tera::Value, tera::Error> {
+fn first_lower(
+    s: &tera::Value,
+    _: &HashMap<String, tera::Value>,
+) -> Result<tera::Value, tera::Error> {
     let c = try_get_value!("data.name", "value", String, s);
     if !regex::Regex::new(r"^\w+$").unwrap().is_match(&c) {
         return Ok(tera::Value::String("unknown_error".to_string()));
@@ -17,18 +20,22 @@ fn first_lower(s: &tera::Value, _: &HashMap<String, tera::Value>) -> Result<tera
     let mut c = c.chars();
     match c.next() {
         None => Ok(tera::Value::String(String::new())),
-        Some(f) => Ok(tera::Value::String(f.to_lowercase().collect::<String>() + c.as_str())),
+        Some(f) => Ok(tera::Value::String(
+            f.to_lowercase().collect::<String>() + c.as_str(),
+        )),
     }
 }
 
-fn lower_case(s: &tera::Value, _: &HashMap<String, tera::Value>) -> Result<tera::Value, tera::Error> {
+fn lower_case(
+    s: &tera::Value,
+    _: &HashMap<String, tera::Value>,
+) -> Result<tera::Value, tera::Error> {
     let c = try_get_value!("data.name", "value", String, s);
     if !regex::Regex::new(r"^\w+$").unwrap().is_match(&c) {
         return Ok(tera::Value::String("unknown_error".to_string()));
     }
     Ok(tera::Value::String(c.to_lowercase()))
 }
-
 
 pub fn generate(out_file: &Path, data: &Vec<YapiObj>) -> Result<()> {
     let temp = r#"
@@ -54,7 +61,13 @@ export default {
     let mut context = Context::new();
     context.insert("list", &data);
 
-    match OpenOptions::new().read(true).write(true).truncate(true).create(true).open(out_file) {
+    match OpenOptions::new()
+        .read(true)
+        .write(true)
+        .truncate(true)
+        .create(true)
+        .open(out_file)
+    {
         Ok(mut file) => {
             let code = tera.render("api", &context)?;
             file.write_all(code.as_bytes())?;
