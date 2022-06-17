@@ -39,20 +39,20 @@ pub struct ResponseValueType {
     __ref: Option<String>,
 }
 
-fn get_response_type_with_cb(value: &ResponseValueType, cb: &mut impl FnMut(String, String)) -> String {
+fn get_response_type_with_cb(value: &ResponseValueType, cb: &mut impl FnMut(String, String, usize), level: usize) -> String {
     match value.r#type.as_str() {
         "object" => {
             if let Some(properties) = &value.properties {
                 let mut result = format!("\n// ref: {}\n", value.__ref.as_ref().unwrap());
                 result.push_str("{\n");
                 for (k, v) in properties {
-                    writeln!(result, "{}:{}", k, get_response_type_with_cb(v, cb)).unwrap();
+                    writeln!(result, "{}:{}", k, get_response_type_with_cb(v, cb, level + 1)).unwrap();
                 }
                 result.push('}');
                 match value.__ref {
                     Some(ref ref1) => {
                         let key = pascal_case(ref1);
-                        cb(key.clone(), result);
+                        cb(key.clone(), result, level);
                         return key;
                     }
                     None => {
@@ -64,7 +64,7 @@ fn get_response_type_with_cb(value: &ResponseValueType, cb: &mut impl FnMut(Stri
         }
         "array" => {
             if let Some(items) = &value.items {
-                return format!("{}[]", get_response_type_with_cb(items, cb));
+                return format!("{}[]", get_response_type_with_cb(items, cb, level));
             }
             String::new()
         }
@@ -116,14 +116,14 @@ pub fn generate(data: &Vec<YapiObj>) -> AnyResult<()> {
 
     let mut response_deps: HashSet<String> = HashSet::new();
     let mut request_deps: HashSet<String> = HashSet::new();
-    let mut response_deps_cb = |key: String, obj_str: String| {
-        if !response_deps.contains(&key) {
+    let mut response_deps_cb = |key: String, obj_str: String, level: usize| {
+        if level == 1 && !response_deps.contains(&key) {
             response_deps.insert(key.clone());
         }
         cb(key, obj_str);
     };
-    let mut request_deps_cb = |key: String, obj_str: String| {
-        if !request_deps.contains(&key) {
+    let mut request_deps_cb = |key: String, obj_str: String, level: usize| {
+        if level== 1 && !request_deps.contains(&key) {
             request_deps.insert(key.clone());
         }
         cb(key, obj_str);
@@ -191,7 +191,7 @@ pub fn generate(data: &Vec<YapiObj>) -> AnyResult<()> {
     Ok(())
 }
 
-pub fn generate_response(item: &YapiItem, obj: &YapiObj, cb: &mut impl FnMut(String, String)) -> AnyResult<String> {
+pub fn generate_response(item: &YapiItem, obj: &YapiObj, cb: &mut impl FnMut(String, String, usize)) -> AnyResult<String> {
     let re = Regex::new(r"^\w+$").unwrap();
 
     let mut set = HashSet::new();
@@ -217,14 +217,14 @@ pub fn generate_response(item: &YapiItem, obj: &YapiObj, cb: &mut impl FnMut(Str
             item.path,
             obj.name,
             item.title,
-            get_response_type_with_cb(&v, cb)
+            get_response_type_with_cb(&v, cb, 1)
         );
         set.insert(title);
     }
     Ok(result)
 }
 
-pub fn generate_request(item: &YapiItem, _obj: &YapiObj, cb: &mut impl FnMut(String, String)) -> AnyResult<String> {
+pub fn generate_request(item: &YapiItem, _obj: &YapiObj, cb: &mut impl FnMut(String, String, usize)) -> AnyResult<String> {
     let re = Regex::new(r"^\w+$").unwrap();
     let mut result = String::new();
     let mut map: HashMap<String, String> = HashMap::new();
@@ -278,7 +278,7 @@ pub fn generate_request(item: &YapiItem, _obj: &YapiObj, cb: &mut impl FnMut(Str
         ReqBodyType::Json => match item.req_body_other {
             Some(ref body) => {
                 let v: ResponseValueType = serde_json::from_str(body)?;
-                get_response_type_with_cb(&v, cb)
+                get_response_type_with_cb(&v, cb, 1)
             }
             None => String::from(""),
         },
