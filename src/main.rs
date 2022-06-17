@@ -1,3 +1,5 @@
+use std::borrow::Borrow;
+use std::collections::HashMap;
 use std::path::Path;
 
 use anyhow::{anyhow, Result};
@@ -108,7 +110,7 @@ async fn main() -> Result<(), anyhow::Error> {
 
     ts_template::generate(out_file, &data)?;
     ts_types::generate(&data)?;
-    ts_types::generate_request(&data)?;
+    // ts_types::generate_request(&data)?;
     Ok(())
 }
 
@@ -136,4 +138,14 @@ async fn file_loader(path: &str) -> Result<String> {
 async fn url_loader(url: &str) -> Result<String> {
     let string = reqwest::get(url).await?.text().await?;
     Ok(string)
+}
+
+fn f() {
+    let mut map = HashMap::new();
+    map.insert("a".to_string(), "a1".to_string());
+    let arr = vec!["b".to_string(), "c".to_string(), "d".to_string()];
+    let f =  | x: String| {&map.insert(x.clone(), x);};
+    arr.into_iter().for_each(f);
+    println!("{:?}", map);
+
 }
